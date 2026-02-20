@@ -35,5 +35,5 @@ backend/static_miniapp/
 # Backups
 backups/
 
-# Screenshots
-*.png
+# Screenshots (root level only)
+/*.png
