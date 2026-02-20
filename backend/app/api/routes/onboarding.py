@@ -109,6 +109,8 @@ STEP_QUESTIONS = {
     "available_days": {
         "question": "Сколько дней в неделю готов тренироваться?",
         "options": [
+            {"value": 1, "label": "1 день", "sub": "минимальная нагрузка", "emoji": "🌱"},
+            {"value": 2, "label": "2 дня", "sub": "лёгкий старт", "emoji": "🌿"},
             {"value": 3, "label": "3 дня", "sub": "оптимально для начала", "emoji": "📅"},
             {"value": 4, "label": "4 дня", "sub": "хороший баланс", "emoji": "🗓"},
             {"value": 5, "label": "5 дней", "sub": "серьёзный подход", "emoji": "💯"},
