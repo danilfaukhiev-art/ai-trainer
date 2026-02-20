@@ -24,7 +24,7 @@ async def get_or_create_user(tg_user) -> Tuple[User, bool]:
             db.add(user)
             await db.flush()  # get user.id
 
-            onboarding = OnboardingState(user_id=user.id, step="name")
+            onboarding = OnboardingState(user_id=user.id, step="consent")
             db.add(onboarding)
 
             pro_sub = Subscription(
