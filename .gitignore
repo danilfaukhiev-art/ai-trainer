@@ -1,8 +1,8 @@
 # Environment files (secrets!)
 .env
 .env.local
-.env.production
-*.env
+*.env.local
+# miniapp/.env.production is tracked (contains only public API URL)
 
 # Python
 __pycache__/
