@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { workoutsAPI, profileAPI } from '../api/client'
@@ -107,6 +107,8 @@ export default function WorkoutPage() {
   // Per-set tracking: exId -> array of {reps_done, weight_kg} per set
   const [setsData, setSetsData] = useState<Record<string, { reps: string; weight: string }[]>>({})
   const [completedSets, setCompletedSets] = useState<Record<string, boolean[]>>({})
+  const [warmupTimerKey, setWarmupTimerKey] = useState(0)
+  const [restSeconds, setRestSeconds] = useState<number | null>(null)
 
   useEffect(() => {
     profileAPI.getProfile().then(r => {
@@ -164,7 +166,13 @@ export default function WorkoutPage() {
   const toggleSetDone = (exId: string, setIdx: number) => {
     setCompletedSets(prev => {
       const updated = [...(prev[exId] || [])]
+      const wasDone = updated[setIdx]
       updated[setIdx] = !updated[setIdx]
+      // Start rest timer when marking set as done
+      if (!wasDone && updated[setIdx]) {
+        const ex = workout?.exercises.find(e => e.id === exId)
+        if (ex?.rest_sec && ex.rest_sec > 0) setRestSeconds(ex.rest_sec)
+      }
       return { ...prev, [exId]: updated }
     })
   }
@@ -334,21 +342,33 @@ export default function WorkoutPage() {
             className="rounded-2xl p-5 border"
             style={{ background: 'rgba(16, 185, 129, 0.06)', borderColor: 'rgba(16, 185, 129, 0.2)' }}
           >
-            <h2 className="text-2xl font-bold mb-3 tracking-tight">{wEx.name}</h2>
-            <div className="flex gap-3 mb-3">
-              {wEx.duration_sec && (
-                <div className="flex-1 rounded-xl px-3 py-2.5 text-center" style={{ background: 'rgba(16, 185, 129, 0.12)' }}>
-                  <p className="text-lg font-extrabold">{wEx.duration_sec}с</p>
-                  <p className="text-[11px] text-tg-hint font-medium">Время</p>
-                </div>
-              )}
-              {wEx.reps && (
+            <h2 className="text-2xl font-bold mb-4 tracking-tight">{wEx.name}</h2>
+            {wEx.duration_sec ? (
+              <div className="flex justify-center mb-4">
+                <CountdownTimer
+                  key={warmupTimerKey}
+                  seconds={wEx.duration_sec}
+                  color="#10b981"
+                  onComplete={() => {
+                    setTimeout(() => {
+                      if (warmupIdx < warmup.exercises.length - 1) {
+                        setWarmupIdx(i => i + 1)
+                        setWarmupTimerKey(k => k + 1)
+                      } else {
+                        setPhase('workout')
+                      }
+                    }, 600)
+                  }}
+                />
+              </div>
+            ) : wEx.reps ? (
+              <div className="flex gap-3 mb-3">
                 <div className="flex-1 rounded-xl px-3 py-2.5 text-center" style={{ background: 'rgba(16, 185, 129, 0.12)' }}>
                   <p className="text-lg font-extrabold">{wEx.reps}</p>
                   <p className="text-[11px] text-tg-hint font-medium">Повторения</p>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : null}
             {wEx.notes && (
               <div className="rounded-xl p-3" style={{ background: 'rgba(0,0,0,0.03)' }}>
                 <p className="text-sm text-tg-hint leading-relaxed">{wEx.notes}</p>
@@ -371,7 +391,7 @@ export default function WorkoutPage() {
           {warmupIdx < warmup.exercises.length - 1 ? (
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={() => setWarmupIdx(i => i + 1)}
+              onClick={() => { setWarmupIdx(i => i + 1); setWarmupTimerKey(k => k + 1) }}
               className="flex-1 py-3.5 rounded-xl font-bold text-sm text-white"
               style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
             >
@@ -737,6 +757,41 @@ export default function WorkoutPage() {
         )}
       </div>
 
+      {/* Rest Timer overlay */}
+      <AnimatePresence>
+        {restSeconds !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 80 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 80 }}
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl p-5"
+            style={{ background: 'var(--tg-theme-bg-color, #fff)', boxShadow: '0 -4px 24px rgba(0,0,0,0.18)' }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="font-bold text-base">Отдых</p>
+                <p className="text-xs text-tg-hint">Следующий подход через...</p>
+              </div>
+              <button
+                onClick={() => setRestSeconds(null)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{ background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-hint-color)' }}
+              >
+                Пропустить →
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <CountdownTimer
+                key={restSeconds}
+                seconds={restSeconds}
+                color="var(--tg-theme-button-color, #2481cc)"
+                onComplete={() => setRestSeconds(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* RPE Section */}
       {currentExIdx === workout.exercises.length - 1 && (
         <motion.div
@@ -784,6 +839,59 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="stat-card flex-1 flex flex-col items-center rounded-xl px-3 py-3">
       <span className="text-lg font-extrabold">{value}</span>
       <span className="text-[11px] text-tg-hint font-medium mt-0.5">{label}</span>
+    </div>
+  )
+}
+
+function CountdownTimer({ seconds, onComplete, color = '#10b981' }: {
+  seconds: number
+  onComplete?: () => void
+  color?: string
+}) {
+  const [timeLeft, setTimeLeft] = useState(seconds)
+  const [running, setRunning] = useState(true)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
+
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      setRunning(false)
+      onCompleteRef.current?.()
+      return
+    }
+    if (!running) return
+    const t = setTimeout(() => setTimeLeft(s => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [running, timeLeft])
+
+  const r = 42
+  const circ = 2 * Math.PI * r
+  const offset = circ - ((seconds - timeLeft) / seconds) * circ
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative w-32 h-32">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(128,128,128,0.15)" strokeWidth="7" />
+          <circle
+            cx="50" cy="50" r={r} fill="none"
+            stroke={color} strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={circ} strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 0.9s linear' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-4xl font-black leading-none">{timeLeft}</span>
+          <span className="text-xs text-tg-hint">сек</span>
+        </div>
+      </div>
+      <button
+        onClick={() => setRunning(r => !r)}
+        className="px-8 py-2.5 rounded-xl font-bold text-sm"
+        style={{ background: running ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.12)', color: running ? '#ef4444' : color }}
+      >
+        {running ? '⏸ Пауза' : timeLeft === seconds ? '▶ Старт' : '▶ Продолжить'}
+      </button>
     </div>
   )
 }
