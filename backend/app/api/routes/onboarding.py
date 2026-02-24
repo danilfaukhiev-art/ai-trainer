@@ -24,6 +24,7 @@ STEPS = [
     "weight",
     "fitness_level",
     "equipment",
+    "inventory",
     "injuries",
     "medical_notes",
     "available_days",
@@ -86,8 +87,17 @@ STEP_QUESTIONS = {
         "question": "Где планируешь тренироваться?",
         "options": [
             {"value": "gym", "label": "Тренажёрный зал", "emoji": "🏋️"},
-            {"value": "home", "label": "Дома (есть инвентарь)", "sub": "гантели, штанга, турник", "emoji": "🏠"},
-            {"value": "minimal", "label": "Дома / улица", "sub": "своё тело, резинки", "emoji": "🎽"},
+            {"value": "home", "label": "Дома", "emoji": "🏠"},
+            {"value": "street", "label": "На улице / парк", "emoji": "🌳"},
+        ],
+    },
+    "inventory": {
+        "question": "Какой инвентарь есть в наличии?",
+        "options": [
+            {"value": "barbell", "label": "Штанга и гантели", "emoji": "🏋️"},
+            {"value": "dumbbells", "label": "Только гантели", "emoji": "💪"},
+            {"value": "bands", "label": "Резинки / петли", "emoji": "🎽"},
+            {"value": "none", "label": "Нет инвентаря", "sub": "только собственный вес", "emoji": "🤸"},
         ],
     },
     "injuries": {
@@ -217,6 +227,9 @@ async def submit_onboarding_step(
     state.answers = answers
 
     next_step = STEP_NEXT.get(payload.step, "complete")
+    # Gym users skip the inventory step (they have all equipment)
+    if payload.step == "equipment" and payload.answer == "gym":
+        next_step = STEP_NEXT.get("inventory", "complete")
     state.step = next_step
 
     if next_step == "complete":
@@ -266,7 +279,18 @@ async def _save_profile(user_id: str, answers: dict, db: AsyncSession):
     profile.height_cm = answers.get("height")
     profile.weight_kg = answers.get("weight")
     profile.fitness_level = answers.get("fitness_level")
-    profile.equipment = answers.get("equipment")
+    location = answers.get("equipment", "gym")
+    inventory = answers.get("inventory", "none")
+    if location == "gym":
+        profile.equipment = "gym"
+    elif inventory == "barbell":
+        profile.equipment = "home_barbell"
+    elif inventory == "dumbbells":
+        profile.equipment = "home_dumbbells"
+    elif inventory == "bands":
+        profile.equipment = "bands"
+    else:
+        profile.equipment = "bodyweight"
     injuries = answers.get("injuries", [])
     profile.injuries = [i for i in injuries if i != "none"]
     profile.medical_notes = answers.get("medical_notes")
