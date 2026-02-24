@@ -86,8 +86,8 @@ STEP_QUESTIONS = {
         "question": "Где планируешь тренироваться?",
         "options": [
             {"value": "gym", "label": "Тренажёрный зал", "emoji": "🏋️"},
-            {"value": "home", "label": "Дома", "sub": "штанга / гантели", "emoji": "🏠"},
-            {"value": "minimal", "label": "Минимум оборудования", "sub": "резинки, собственный вес", "emoji": "🎽"},
+            {"value": "home", "label": "Дома (есть инвентарь)", "sub": "гантели, штанга, турник", "emoji": "🏠"},
+            {"value": "minimal", "label": "Дома / улица", "sub": "своё тело, резинки", "emoji": "🎽"},
         ],
     },
     "injuries": {
