@@ -19,7 +19,6 @@ def main_keyboard(miniapp_url: str) -> ReplyKeyboardMarkup:
             ],
         ],
         resize_keyboard=True,
-        persistent=True,
     )
 
 
