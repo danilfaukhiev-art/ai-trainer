@@ -230,7 +230,9 @@ class AIOrchestrator:
             squat_ref = round(weight_kg * (1.1 if gender == "female" else 1.6))
             dl_ref = round(weight_kg * (1.2 if gender == "female" else 2.0))
 
-        injuries_str = ', '.join(profile.get('injuries', [])) or 'нет'
+        injuries_raw = profile.get('injuries', [])
+        injuries_str = ', '.join(injuries_raw) if injuries_raw else 'нет'
+        medical_notes = profile.get('medical_notes') or ''
         days = profile.get('available_days', 3)
         minutes = profile.get('session_minutes', 60)
         equipment = profile.get('equipment', 'gym')
@@ -306,6 +308,7 @@ class AIOrchestrator:
 - Оборудование: {equip_map.get(equipment, equipment)}
 - Дней в неделю: {days}, длительность сессии: {minutes} мин
 - Травмы/ограничения: {injuries_str}
+- Медицинские особенности: {medical_notes if medical_notes else 'нет'}
 - Спортивный фон: {profile.get('sport_background', 'нет')}
 
 РАСЧЁТНЫЕ БАЗОВЫЕ ВЕСА:
@@ -330,7 +333,13 @@ class AIOrchestrator:
 Для is_main_lift=true ОБЯЗАТЕЛЬНО: warmup_str, top_set_weight, top_set_sets, top_set_reps, top_set_rpe, top_set_note, volume_weight, volume_sets, volume_reps, volume_note
 Для is_main_lift=false ОБЯЗАТЕЛЬНО: sets, reps_min, reps_max, weight_kg
 
-УЧТИ ТРАВМЫ: {injuries_str}
+⚠️ ЗДОРОВЬЕ — ПРИОРИТЕТ №1:
+Травмы/ограничения: {injuries_str}
+Медицинские особенности: {medical_notes if medical_notes else 'нет'}
+{'- ИСКЛЮЧИ все упражнения с нагрузкой на поражённые зоны' if injuries_raw else ''}
+{'- Замени на безопасные альтернативы (напр. вместо приседа со штангой — жим ногами или разгибание)' if injuries_raw else ''}
+{'- В поле coach_note для каждого упражнения укажи как оно адаптировано под ограничения' if injuries_raw else ''}
+{'- Медицинские особенности: учти при выборе интенсивности и типа упражнений' if medical_notes else ''}
 
 Верни ТОЛЬКО валидный JSON. Ровно {days} дней:
 {{
